@@ -1,4 +1,5 @@
 import os
+import subprocess as sub
 import time
 import speech_recognition as sr
 
@@ -16,13 +17,14 @@ def read_config():
     commands = []
     path = "%s/voice-control/config" % os.environ['XDG_CONFIG_HOME']
     with open(path, "r") as config_file:
-        for line in config_file.readlines():
+        for line in config_file:
             fields = line.split(sep=",")
             words = fields[0].split()
             commands.append((set(words), fields[1]))
             for word in words:
                 keywords.append((word,1.0))
-
+    
+    print(commands)
     return commands,keywords
 
 
@@ -38,8 +40,9 @@ def listen(commands, keywords):
             print("i understod: %s" % sentence)
             words = set(sentence.split())
             for (key, command) in commands:
-                if len(key.difference(words)) <= 1:
-                    os.system(command)
+                if len(key.intersection(words)) >= 1:
+                    print(command)
+                    sub.Popen(command, shell=True)
 
         except sr.UnknownValueError:
             print("i dont understand")
@@ -52,12 +55,9 @@ def listen(commands, keywords):
     with m as source:
         r.adjust_for_ambient_noise(source)
 
-    stop_listening = r.listen_in_background(m, callback)
-    
-    while True:
-        time.sleep(.5)
-
-    stop_listening(wait_for_stop=True)
+        while True:
+            audio = r.listen(source)
+            callback(r, audio)
 
 
 if __name__ == "__main__":
